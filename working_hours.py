@@ -1,8 +1,39 @@
 # %%
 import pandas as pd
 from IPython.display import display
+import os
+import glob
 
-df = pd.read_csv("working_hours.csv")
+
+# %% [markdown]
+# ## Parameters
+
+
+# %%
+use_last_file = True
+filename = "working_hours.csv"
+
+
+# %%
+def get_last_csv_file(path="/mnt/c/Users/jaum/Downloads"):
+    # Get list of all CSV files in the current directory
+    csv_files = glob.glob(f"{path}/*.csv")
+
+    # Sort files by creation time
+    csv_files_sorted = sorted(csv_files, key=os.path.getctime)
+    return csv_files_sorted[-1]
+
+
+if use_last_file:
+    last_file = get_last_csv_file()
+    if not os.path.exists(last_file):
+        last_file = filename
+    print(f"Using {last_file} as the last file")
+    df = pd.read_csv(last_file)
+    df.to_csv(filename, index=False)
+    os.remove(last_file)
+else:
+    df = pd.read_csv(filename)
 df.head()
 
 # %%
@@ -18,7 +49,7 @@ df["date"] = pd.to_datetime(df["time started"].dt.date)
 # %%
 df["day_of_week"] = df["date"].dt.dayofweek
 df["weekend"] = df["day_of_week"] >= 5
-df["week_number"] = df["date"].dt.week
+df["week_number"] = df["date"].dt.isocalendar().week
 df["corrected_date"] = df["date"]
 df.loc[df["weekend"], "corrected_date"] -= pd.offsets.Day(2)
 df["corrected_day_of_week"] = df["corrected_date"].dt.dayofweek
@@ -33,6 +64,7 @@ print(f"total records after removing incomplete records: {len(df)}")
 
 
 # %%
+df["activity name"] = df["activity name"].str.strip()
 df = df[df["activity name"] == "Jaume trabajo"]
 hours_per_day = df.groupby(by="corrected_date")["duration minutes"].sum()
 print("Total days: ", len(hours_per_day))
@@ -77,9 +109,9 @@ print("Total working days after removing low hours: ", len(hours_per_day))
 # %%
 import matplotlib.pyplot as plt
 
-weekly_hours = hours_per_day.groupby(hours_per_day["corrected_date"].dt.week).agg(
-    {"hours": ["sum", "count"], "corrected_date": ["min", "max"]}
-)
+weekly_hours = hours_per_day.groupby(
+    hours_per_day["corrected_date"].dt.isocalendar().week
+).agg({"hours": ["sum", "count"], "corrected_date": ["min", "max"]})
 weekly_hours.columns = ["actual hours", "working days", "start date", "end date"]
 required_hours = weekly_hours["working days"] * 8
 # Add half hour per day for the first 4 weeks
@@ -106,10 +138,10 @@ import calendar
 
 tostring = lambda col: [
     f"{calendar.month_abbr[x]}{y}"
-    for x, y in zip(weekly_hours[col].dt.month, weekly_hours[col].dt.year)
+    for x, y in zip(weekly_hours[col].dt.month, weekly_hours[col].dt.day)
 ]
 weekly_hours.index = [
-    f"{x} - {y}" for x, in zip(tostring("start date"), tostring("end date"))
+    f"{x} - {y}" for x, y in zip(tostring("start date"), tostring("end date"))
 ]
 
 # %%
