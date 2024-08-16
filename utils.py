@@ -15,6 +15,7 @@ def get_last_csv_file(download_path):
 
 
 def load_data(filename, use_last_file, download_path):
+    print("loading data")
     if use_last_file:
         last_file = get_last_csv_file(download_path)
         if not os.path.exists(last_file):
@@ -32,5 +33,6 @@ def load_data(filename, use_last_file, download_path):
         df.to_csv(filename, index=False)
         os.remove(last_file)
     else:
+        print("not using last file, using", filename)
         df = pd.read_csv(filename)
     return df

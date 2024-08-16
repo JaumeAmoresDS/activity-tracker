@@ -182,7 +182,7 @@ print(
 # %%
 import os
 
-os.makedirs("working_hours_results", exist_ok=True)
-weekly_hours.to_csv("working_hours_results/weekly_hours.csv")
-hours_per_day.to_csv("working_hours_results/hours_per_day.csv")
-df.to_csv("working_hours_results/processed_working_hours.csv")
+os.makedirs("working_hours_analysis", exist_ok=True)
+weekly_hours.to_csv("working_hours_analysis/weekly_hours.csv")
+hours_per_day.to_csv("working_hours_analysis/hours_per_day.csv")
+df.to_csv("working_hours_analysis/processed_working_hours.csv")

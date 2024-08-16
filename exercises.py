@@ -15,7 +15,19 @@ def prepare_data(date_col, df):
     df.set_index(date_col, inplace=True)
 
 
-def week_analysis(program_col, df, number_program_exercises, start_date):
+def week_analysis(
+    program_col: str,
+    df: pd.DataFrame,
+    number_program_exercises: int,
+    start_date: str,
+    rounding_method: str = "round",  # round, floor, ceil
+    last_day_has_different_number_of_exercises: bool = True,
+    number_program_repetitions_per_week: int = 2,
+):
+    print("Analyzing", program_col)
+    print("start date", start_date)
+    print("number_program_exercises", number_program_exercises)
+    print("rounding_method", rounding_method)
 
     start_date = pd.to_datetime(start_date)
 
@@ -40,13 +52,26 @@ def week_analysis(program_col, df, number_program_exercises, start_date):
         ]
     )
 
-    number_of_exercises_per_week = number_program_exercises * 2
+    number_of_exercises_per_week = (
+        number_program_exercises * number_program_repetitions_per_week
+    )
     number_of_exercises_per_two_weeks = number_of_exercises_per_week * 2
-    number_of_exercises_first_week = np.ceil(number_of_exercises_per_two_weeks / 7)
-    number_of_exercises_last_day = (
-        number_of_exercises_per_two_weeks
-        - number_of_exercises_first_week
-        * np.floor(number_of_exercises_per_two_weeks / 7)
+    rounding_op = getattr(np, rounding_method)
+    number_of_exercises_all_but_last_day = rounding_op(
+        number_of_exercises_per_two_weeks / 7
+    )
+    if last_day_has_different_number_of_exercises:
+        number_of_exercises_last_day = (
+            number_of_exercises_per_two_weeks - number_of_exercises_all_but_last_day * 6
+        )
+    else:
+        number_of_exercises_last_day = number_of_exercises_all_but_last_day
+    print(
+        f"number_of_exercises_all_but_last_day: {number_of_exercises_all_but_last_day}"
+    )
+    print(f"number_of_exercises_last_day: {number_of_exercises_last_day}")
+    print(
+        f"total number of exercises every two weeks: {number_of_exercises_all_but_last_day*6 + number_of_exercises_last_day}"
     )
 
     capped_total_remaining_to_date = 0
@@ -59,10 +84,10 @@ def week_analysis(program_col, df, number_program_exercises, start_date):
 
         # Calculate the percentage with respect to a total of 24
         total_per_week = (
-            number_of_exercises_first_week * (number_days - 1)
+            number_of_exercises_all_but_last_day * (number_days - 1)
             + number_of_exercises_last_day
             if number_days == 4
-            else number_of_exercises_first_week * number_days
+            else number_of_exercises_all_but_last_day * number_days
         )
         week_percentage = week_sum / total_per_week * 100
 
@@ -85,7 +110,9 @@ def week_analysis(program_col, df, number_program_exercises, start_date):
         number_pilates_days = np.ceil(days_from_start / 2)
 
         if df.index.max() < end_date:
-            required_aggregate = number_of_exercises_first_week * number_pilates_days
+            required_aggregate = (
+                number_of_exercises_all_but_last_day * number_pilates_days
+            )
         else:
             required_aggregate = total_per_week
 
@@ -120,8 +147,8 @@ def week_analysis(program_col, df, number_program_exercises, start_date):
         start_date = end_date + pd.DateOffset(days=1)
 
     # Save the results to a CSV file
-    os.makedirs("date_numbers", exist_ok=True)
-    week_data.to_csv("date_numbers/one_week_data.csv")
+    os.makedirs("exercise_analysis", exist_ok=True)
+    week_data.to_csv(f"exercise_analysis/{program_col}_one_week_data.csv")
 
     display(week_data)
     print(
@@ -139,29 +166,75 @@ def main(
     use_last_file,
     download_path,
     number_program_exercises,
+    start_date,
+    rounding_method: str = "round",  # round, floor, ceil
+    last_day_has_different_number_of_exercises: bool = True,
+    number_program_repetitions_per_week: int = 2,
 ):
     # Load the data
     df = load_data(filename, use_last_file, download_path)
     prepare_data(date_col, df)
-    week_data = week_analysis(program_col, df, number_program_exercises)
+    week_data = week_analysis(
+        program_col,
+        df,
+        number_program_exercises,
+        start_date,
+        rounding_method,
+        last_day_has_different_number_of_exercises,
+        number_program_repetitions_per_week,
+    )
     return week_data
 
 
-if __name__ == "__main__":
-    filename = "pilates.csv"
-    date_col = "date"
-    use_last_file = False
-    download_path = "/mnt/c/Users/jaum/Downloads"
-    program_col = "back-and-superman"
-    number_program_exercises = 12
-    start_date = "2024-06-27"
+# %%
+print("-" * 80)
+filename = "pilates.csv"
+date_col = "date"
+download_path = "/mnt/c/Users/jaum/Downloads"
+rounding_method = "round"  # round, floor, ceil
+last_day_has_different_number_of_exercises = True
+number_program_repetitions_per_week = 2
 
-    main(
-        filename,
-        date_col,
-        program_col,
-        use_last_file,
-        download_path,
-        number_program_exercises,
-        start_date,
-    )
+program_col = "back-and-superman"
+number_program_exercises = 12
+start_date = "2024-06-27"
+use_last_file = False
+
+
+_ = main(
+    filename,
+    date_col,
+    program_col,
+    use_last_file,
+    download_path,
+    number_program_exercises,
+    start_date,
+    rounding_method,
+    last_day_has_different_number_of_exercises,
+    number_program_repetitions_per_week,
+)
+
+print()
+print("-" * 80)
+program_col = "ankle-arms"
+number_program_exercises = 18
+start_date = "2024-08-06"
+use_last_file = False
+
+_ = main(
+    filename,
+    date_col,
+    program_col,
+    use_last_file,
+    download_path,
+    number_program_exercises,
+    start_date,
+    rounding_method,
+    last_day_has_different_number_of_exercises,
+    number_program_repetitions_per_week,
+)
+
+
+# %%
+
+# if __name__ == "__main__":
