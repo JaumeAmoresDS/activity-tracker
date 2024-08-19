@@ -38,7 +38,6 @@ def week_analysis(
         columns=[
             "start_date",
             "end_date",
-            "total remaining to date (caped)",
             "last considered day",
             "total this week / to date",
             "total pilates days this week",
@@ -74,7 +73,6 @@ def week_analysis(
         f"total number of exercises every two weeks: {number_of_exercises_all_but_last_day*6 + number_of_exercises_last_day}"
     )
 
-    capped_total_remaining_to_date = 0
     total_remaining_to_date = 0
 
     while start_date < df.index.max():
@@ -118,17 +116,12 @@ def week_analysis(
 
         percentage_to_date = week_sum / required_aggregate * 100
 
-        capped_total_remaining_to_date = max(
-            capped_total_remaining_to_date, -number_program_exercises
-        ) + (total_per_week - week_sum)
-        capped_total_remaining_to_date = max(-12, capped_total_remaining_to_date)
         total_remaining_to_date += total_per_week - week_sum
 
         # Save the result
         week_data.loc[len(week_data)] = [
             start_date,  # start date
             end_date,  # end date
-            capped_total_remaining_to_date,  # total remaining to date, capped at program_num_exercises
             df.index.max(),  # last considered day
             week_sum,  # total this week / to date
             number_days,  # total pilates days this week
@@ -153,7 +146,7 @@ def week_analysis(
     display(week_data)
     print(
         "Total remaining to date: ",
-        week_data["total remaining to date (caped)"].values[-1],
+        week_data["total remaining to date"].values[-1],
     )
     return week_data
 
