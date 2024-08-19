@@ -6,41 +6,67 @@ import math
 import matplotlib.pyplot as plt
 
 
-def rolling_window_analysis(df, window_size, reference_total, num_days):
+def rolling_window_analysis(df, window_size, reference_total, num_days, padding=None):
+    if num_days > 0:
+        df["future"] = False
+        # Add Y more days to the dataframe with 0 exercises each day
+        future_dates = pd.date_range(
+            start=df["date"].values[-1] + pd.DateOffset(1), periods=num_days
+        )
+        future_df = pd.DataFrame(
+            {"date": future_dates, "exercises": padding, "future": True}
+        )
+        df = pd.concat([df, future_df])
+
     # Set the 'date' column as the index
     df = df.set_index("date")
-
     # Calculate the rolling sum of exercises using the defined window size
-    rolling_sum = df["exercises"].rolling(window_size).sum()
+    df["rolling_sum"] = df["exercises"].rolling(window_size).sum()
+    df["rolling_median"] = df["exercises"].rolling(window_size).median()
+    df["rolling_mean"] = df["exercises"].rolling(window_size).mean()
+    if num_days > 0 and padding is None:
+        df.loc[df.future, "exercises"] = df.loc[~df.future, "rolling_median"].values[-1]
+        df["rolling_sum"] = df["exercises"].rolling(window_size).sum()
+        df["rolling_median"] = df["exercises"].rolling(window_size).median()
+        df["rolling_mean"] = df["exercises"].rolling(window_size).mean()
 
     # Calculate the difference between the reference and the rolling sum
-    difference = reference_total - rolling_sum
+    difference = reference_total - df["rolling_sum"]
 
     # Create a separate axis for the difference plot
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
 
     # Plot the rolling sum and the reference line
-    ax1.plot(df.index, rolling_sum, "b.-", label="Rolling Sum")
+    ax1.plot(
+        df.index[~df.future], df["rolling_sum"][~df.future], "b.-", label="Rolling Sum"
+    )
+    if num_days > 0:
+        ax1.plot(
+            df.index[df.future],
+            df["rolling_sum"][df.future],
+            "b.--",
+            label="Rolling Sum (Future)",
+        )
     ax1.axhline(y=reference_total, color="r", linestyle="--", label="Reference")
     ax1.set_ylabel("Total Exercises")
     ax1.legend()
 
     # Calculate the difference between the rolling sum and the reference
-    # Add Y more days to the dataframe with 0 exercises each day
-    future_dates = pd.date_range(
-        start=df.index[-1] + pd.DateOffset(1), periods=num_days
-    )
-    future_df = pd.DataFrame({"date": future_dates, "exercises": 0})
-    df = pd.concat([df, future_df])
-
-    # Calculate the rolling sum with the updated dataframe
-    rolling_sum = df["exercises"].rolling(window_size).sum()
-
-    # Calculate the difference between the reference and the rolling sum
-    difference = reference_total - rolling_sum
 
     # Plot the difference
-    ax2.plot(df.index, difference, "g.-", label="Remaining Exercises")
+    ax2.plot(
+        df.index[~df.future],
+        difference[~df.future],
+        "g.-",
+        label="Remaining Exercises",
+    )
+    if num_days > 0:
+        ax2.plot(
+            df.index[df.future],
+            difference[df.future],
+            "g.--",
+            label="Remaining Exercises (Future)",
+        )
     ax2.set_ylabel("Difference")
     ax2.legend()
 
@@ -48,7 +74,7 @@ def rolling_window_analysis(df, window_size, reference_total, num_days):
     plt.xticks(rotation=90)
 
     # Calculate the number of exercises needed to reach the reference in the next Y days
-    exercises_needed = math.ceil(difference[-1] / num_days)
+    exercises_needed = difference.values[-1]
 
     # Print the number of exercises needed
     print(f"Number of exercises needed in the next {num_days} days: {exercises_needed}")
@@ -58,7 +84,7 @@ def rolling_window_analysis(df, window_size, reference_total, num_days):
     # plt.draw()
 
     # Return the rolling sum dataframe
-    return pd.DataFrame(rolling_sum, columns=["Rolling Sum"])
+    return df
 
 
 def main():
@@ -86,7 +112,7 @@ def test_rolling_window_analysis():
     df = pd.DataFrame(
         {
             "date": pd.date_range(start="2022-01-01", periods=10),
-            "exercises": [3, 0, 5, 9, 0, 7, 0, 4, 6, 8],
+            "exercises": [3, 0, 5, 9, 0, 3, 0, 5, 9, 0],
         }
     )
 
@@ -100,10 +126,11 @@ def test_rolling_window_analysis():
     num_days = 2
 
     # Call the rolling_window_analysis function
-    rolling_window_analysis(df, window_size, reference_total, num_days)
+    df = rolling_window_analysis(df, window_size, reference_total, num_days)
+
+    display(df)
 
 
 if __name__ == "__main__":
     # main()
     df = test_rolling_window_analysis()
-    display(df)
