@@ -24,7 +24,24 @@ def rolling_window_analysis(df, window_size, reference_total, num_days):
     difference = rolling_sum - reference_total
 
     # Create a separate axis for the difference plot
-    ax2 = plt.twinx()
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+
+    # Plot the rolling sum and the reference line
+    ax1.plot(df.index, rolling_sum, label="Rolling Sum")
+    ax1.axhline(y=reference_total, color="r", linestyle="--", label="Reference")
+    ax1.set_ylabel("Total Exercises")
+    ax1.legend()
+
+    # Calculate the difference between the rolling sum and the reference
+    difference = rolling_sum - reference_total
+
+    # Plot the difference
+    ax2.plot(df.index, difference, color="g", label="Difference")
+    ax2.set_ylabel("Difference")
+    ax2.legend()
+
+    # Rotate the x-axis labels by 90 degrees
+    plt.xticks(rotation=90)
     ax2.plot(df.index, difference, color="g", label="Difference")
     ax2.set_ylabel("Difference")
     ax2.legend()
@@ -70,6 +87,18 @@ def test_rolling_window_analysis():
             "exercises": [3, 0, 5, 9, 0, 7, 0, 4, 6, 8],
         }
     )
+
+    # Define the window size (X)
+    window_size = 7
+
+    # Define the reference total exercises (as a parameter)
+    reference_total = 100
+
+    # Define the number of days (Y)
+    num_days = 10
+
+    # Call the rolling_window_analysis function
+    rolling_window_analysis(df, window_size, reference_total, num_days)
 
     # Define the window size (X)
     window_size = 7
