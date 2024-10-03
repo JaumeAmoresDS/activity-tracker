@@ -191,7 +191,7 @@ number_program_repetitions_per_week = 2
 program_col = "back-and-superman"
 number_program_exercises = 12
 start_date = "2024-06-27"
-use_last_file = False
+use_last_file = True
 
 
 _ = main(

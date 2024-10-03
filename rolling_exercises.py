@@ -2,33 +2,47 @@ import pandas as pd
 import math
 import pandas as pd
 import math
+from IPython.display import display
 
 import matplotlib.pyplot as plt
 
 
-def rolling_window_analysis(df, window_size, reference_total, num_days, padding=None):
+def rolling_window_analysis(
+    df,
+    window_size,
+    reference_total,
+    num_days,
+    padding=None,
+    date_col="date",
+    exercises_col="exercises",
+):
+    # Convert the 'date' column to datetime type
+    df[date_col] = pd.to_datetime(df[date_col])
+    df = df.fillna(0)
+    df["future"] = False
     if num_days > 0:
-        df["future"] = False
         # Add Y more days to the dataframe with 0 exercises each day
         future_dates = pd.date_range(
-            start=df["date"].values[-1] + pd.DateOffset(1), periods=num_days
+            start=df[date_col].values[-1] + pd.DateOffset(1), periods=num_days
         )
         future_df = pd.DataFrame(
-            {"date": future_dates, "exercises": padding, "future": True}
+            {date_col: future_dates, exercises_col: padding, "future": True}
         )
         df = pd.concat([df, future_df])
 
     # Set the 'date' column as the index
-    df = df.set_index("date")
+    df = df.set_index(date_col)
     # Calculate the rolling sum of exercises using the defined window size
-    df["rolling_sum"] = df["exercises"].rolling(window_size).sum()
-    df["rolling_median"] = df["exercises"].rolling(window_size).median()
-    df["rolling_mean"] = df["exercises"].rolling(window_size).mean()
+    df["rolling_sum"] = df[exercises_col].rolling(window_size).sum()
+    df["rolling_median"] = df[exercises_col].rolling(window_size).median()
+    df["rolling_mean"] = df[exercises_col].rolling(window_size).mean()
     if num_days > 0 and padding is None:
-        df.loc[df.future, "exercises"] = df.loc[~df.future, "rolling_median"].values[-1]
-        df["rolling_sum"] = df["exercises"].rolling(window_size).sum()
-        df["rolling_median"] = df["exercises"].rolling(window_size).median()
-        df["rolling_mean"] = df["exercises"].rolling(window_size).mean()
+        df.loc[df.future, exercises_col] = df.loc[~df.future, "rolling_median"].values[
+            -1
+        ]
+        df["rolling_sum"] = df[exercises_col].rolling(window_size).sum()
+        df["rolling_median"] = df[exercises_col].rolling(window_size).median()
+        df["rolling_mean"] = df[exercises_col].rolling(window_size).mean()
 
     # Calculate the difference between the reference and the rolling sum
     difference = reference_total - df["rolling_sum"]
@@ -76,35 +90,72 @@ def rolling_window_analysis(df, window_size, reference_total, num_days, padding=
     # Calculate the number of exercises needed to reach the reference in the next Y days
     exercises_needed = difference.values[-1]
 
-    # Print the number of exercises needed
-    print(f"Number of exercises needed in the next {num_days} days: {exercises_needed}")
-
     # Show the plot
     plt.show()
     # plt.draw()
+
+    df.to_csv(exercises_col + ".csv", index=False, header=True)
+
+    print()
+    print("-" * 80)
+    print(exercises_col)
+    # Print the number of exercises needed
+    print(f"Number of exercises needed in the next {num_days} days: {exercises_needed}")
+    display(
+        df[
+            [exercises_col, "future", "rolling_sum", "rolling_median", "rolling_mean"]
+        ].tail(window_size + 1)
+    )
 
     # Return the rolling sum dataframe
     return df
 
 
 def main():
-    # Read the CSV file into a pandas DataFrame
-    df = pd.read_csv("your_file.csv")
 
-    # Convert the 'date' column to datetime type
-    df["date"] = pd.to_datetime(df["date"])
+    # Parameters
+    file_name = "pilates.csv"
+
+    # Read the CSV file into a pandas DataFrame
+    df = pd.read_csv(file_name)
 
     # Define the window size (X)
     window_size = 7
 
-    # Define the reference total exercises (as a parameter)
-    reference_total = 100
-
     # Define the number of days (Y)
-    num_days = 10
+    num_days = 0
+
+    # ------------------------------------------------
+    program_col = "back-and-superman"
+    # Define the reference total exercises (as a parameter)
+    reference_total = 12 * 2
 
     # Call the rolling_window_analysis function
-    rolling_window_analysis(df, window_size, reference_total, num_days)
+    _ = rolling_window_analysis(
+        df,
+        window_size,
+        reference_total,
+        num_days,
+        padding=0,
+        date_col="date",
+        exercises_col=program_col,
+    )
+
+    # ------------------------------------------------
+    program_col = "ankle-arms"
+    # Define the reference total exercises (as a parameter)
+    reference_total = 18 * 2
+
+    # Call the rolling_window_analysis function
+    _ = rolling_window_analysis(
+        df,
+        window_size,
+        reference_total,
+        num_days,
+        padding=0,
+        date_col="date",
+        exercises_col=program_col,
+    )
 
 
 def test_rolling_window_analysis():
@@ -133,4 +184,5 @@ def test_rolling_window_analysis():
 
 if __name__ == "__main__":
     # main()
-    df = test_rolling_window_analysis()
+    # df = test_rolling_window_analysis()
+    main()
