@@ -5,19 +5,30 @@ import os
 import pandas as pd
 
 
-def get_last_csv_file(download_path):
+def get_last_csv_file(download_path, prefix_file=""):
     # Get list of all CSV files in the current directory
-    csv_files = glob.glob(f"{download_path}/*.csv")
-
+    pattern_path = f"{download_path}/{prefix_file}*.csv"
+    print("pattern_path", pattern_path)
+    csv_files = glob.glob(pattern_path)
+    if len(csv_files) == 0:
+        print(f"No files found with pattern {pattern_path}")
+        return None
     # Sort files by creation time
     csv_files_sorted = sorted(csv_files, key=os.path.getctime)
     return csv_files_sorted[-1]
 
 
-def load_data(filename, use_last_file, download_path):
+def load_data(
+    filename,
+    use_last_file,
+    download_path,
+    prefix_file="",
+):
     print("loading data")
+    last_file = get_last_csv_file(download_path, prefix_file=prefix_file)
+    if last_file is None:
+        use_last_file = False
     if use_last_file:
-        last_file = get_last_csv_file(download_path)
         if not os.path.exists(last_file):
             x = os.path.getctime(filename)
             print(
